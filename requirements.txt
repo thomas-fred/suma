@@ -1,0 +1,8 @@
+# reading/writing csv files
+pandas==0.25.3
+
+# html parser
+beautifulsoup4==4.9.3
+
+# http requests
+requests==2.5.1
