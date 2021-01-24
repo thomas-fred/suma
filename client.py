@@ -2,8 +2,8 @@ import requests
 import logging
 import re
 from urllib.parse import urljoin, urlparse
-from typing import Optional, Callable
-from dataclass import dataclass
+from typing import Optional, Callable, Sequence
+from dataclasses import dataclass
 from pprint import pformat
 
 from bs4 import BeautifulSoup
@@ -27,14 +27,14 @@ class Suma:
     """
 
     def __init__(self):
-        self.base_url = "https://www.sumawholesale.com/"
+        self.base_url = "http://www.sumawholesale.com/"
 
     def get_product(self, code: str):
         path, name = self._get_product_path_and_name(code)
         data = self._get_product_info(path)
         LOGGER.info(pformat(data))
 
-    def _request(self, method: str, path: str, data: dict):
+    def _request(self, method: str, path: str, data: dict = None):
         """
         Main contact point for requests. Constructs URL, makes request and
         checks response status.
@@ -48,7 +48,7 @@ class Suma:
         # complete URL
         url = urljoin(self.base_url, path)
 
-        response = requests.request(method, url, data)
+        response = requests.request(method, url, data=data)
 
         # raise exception if request unsuccessful
         response.raise_for_status()
@@ -109,7 +109,7 @@ class Suma:
 
         return script.string
 
-    def _get_product_path_and_name(self, code: str) -> Optional[str, str]:
+    def _get_product_path_and_name(self, code: str) -> Optional[Sequence]:
         """
         Given a product code, return product page URL and name
 
