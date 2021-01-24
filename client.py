@@ -1,15 +1,16 @@
-import requests
 import logging
 import re
 from urllib.parse import urljoin, urlparse
 from typing import Optional, Callable, Sequence
 from dataclasses import dataclass
-from pprint import pformat
 
+import requests
 from bs4 import BeautifulSoup
 
 
 LOGGER = logging.getLogger(__name__)
+# raise logging level for requests, otherwise logs every connection opened
+logging.getLogger("requests").setLevel(logging.WARNING)
 
 
 @dataclass
@@ -27,12 +28,18 @@ class Suma:
     """
 
     def __init__(self):
-        self.base_url = "http://www.sumawholesale.com/"
+        # use TLS, otherwise redirected to home
+        self.base_url = "https://www.sumawholesale.com/"
 
     def get_product(self, code: str):
+        """Externally facing method for getting product data."""
+
         path, name = self._get_product_path_and_name(code)
-        data = self._get_product_info(path)
-        LOGGER.info(pformat(data))
+
+        data = self._get_product_pricing(path)
+        data['name'] = name
+
+        return data
 
     def _request(self, method: str, path: str, data: dict = None):
         """
@@ -55,7 +62,7 @@ class Suma:
 
         return response
 
-    def _get_product_info(self, path: str) -> dict:
+    def _get_product_pricing(self, path: str) -> dict:
         """
         Given product page path, return relevant product info
 
@@ -72,13 +79,15 @@ class Suma:
         data = {}
         # attr is instance of ProductAttribute dataclass
         for attr in PRODUCT_ATTRS:
+
             try:
                 # look for attribute pattern in string
                 regex = re.search(attr.pattern, string)
-                value: str = regex.groups[0]
+                value: str = regex.groups()[0]
 
                 # convert to desired type and store
                 data[attr.name] = attr.converter(value)
+
             except AttributeError:
                 LOGGER.warning(
                     f"failed to find attr {attr.name} on page {path}"
@@ -99,7 +108,7 @@ class Suma:
         product_page_html = self._request('GET', path).content
 
         # parse html for product page data
-        soup = BeautifulSoup(product_page_html)
+        soup = BeautifulSoup(product_page_html, features="html.parser")
 
         # product info visible when logged in is stored in javascript
         main_div = soup.body.find(
@@ -117,7 +126,7 @@ class Suma:
             code (str): 5 character alphanumeric product code
 
         Returns:
-            str: Relative path of product page and product name or None if
+            str, str: Relative path of product page and product name or None if
             path or name not found
         """
 
@@ -128,7 +137,7 @@ class Suma:
         search_pg_html = self._request('GET', path).content
 
         # parse html for link to product page
-        soup = BeautifulSoup(search_pg_html)
+        soup = BeautifulSoup(search_pg_html, features="html.parser")
 
         try:
             # listings, should only contain one product having searched by code
@@ -155,10 +164,13 @@ class Suma:
 
 
 # to extract data from selected text (currently JS), register a regex here
-PRODUCT_ATTRS = (
-    ProductAttribute(data) for data in (
-        ('price', r"\"productPrice\":(\d+\.?\d+)", float),
-        ('currentTax', r"\"currentTax\":(\d+\.?\d*+)", bool),
-        # ('includeTax', r"\"includeTax\":\"(\w+)\",", bool),
+PRODUCT_ATTRS = [
+    ProductAttribute(*data) for data in (
+        # ex vat price
+        ('price', r'\"productPrice\":(\d+\.?\d+)', float),
+        # tax rate as a percentage
+        ('currentTax', r'\"currentTax\":(\d+\.?\d*)', float),
+        # is tax payable? redundant courtesy of currentTax
+        # ('includeTax', r'\"includeTax\":\"(\w+)\",', bool),
     )
-)
+]
