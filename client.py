@@ -9,8 +9,6 @@ from bs4 import BeautifulSoup
 
 
 LOGGER = logging.getLogger(__name__)
-# raise logging level for requests, otherwise logs every connection opened
-logging.getLogger("requests").setLevel(logging.WARNING)
 
 
 @dataclass
@@ -30,6 +28,7 @@ class Suma:
     def __init__(self):
         # use TLS, otherwise redirected to home
         self.base_url = "https://www.sumawholesale.com/"
+        self.session = requests.Session()
 
     def get_product(self, code: str):
         """Externally facing method for getting product data."""
@@ -55,7 +54,7 @@ class Suma:
         # complete URL
         url = urljoin(self.base_url, path)
 
-        response = requests.request(method, url, data=data)
+        response = self.session.request(method, url, data=data)
 
         # raise exception if request unsuccessful
         response.raise_for_status()
@@ -164,7 +163,7 @@ class Suma:
 
 
 # to extract data from selected text (currently JS), register a regex here
-PRODUCT_ATTRS = [
+PRODUCT_ATTRS = (
     ProductAttribute(*data) for data in (
         # ex vat price
         ('price', r'\"productPrice\":(\d+\.?\d+)', float),
@@ -173,4 +172,4 @@ PRODUCT_ATTRS = [
         # is tax payable? redundant courtesy of currentTax
         # ('includeTax', r'\"includeTax\":\"(\w+)\",', bool),
     )
-]
+)
