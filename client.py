@@ -93,6 +93,7 @@ class Suma:
                 )
                 raise  # die
 
+
         return data
 
     def _get_text(self, path: str) -> str:
@@ -163,7 +164,7 @@ class Suma:
 
 
 # to extract data from selected text (currently JS), register a regex here
-PRODUCT_ATTRS = (
+PRODUCT_ATTRS = [
     ProductAttribute(*data) for data in (
         # ex vat price
         ('price', r'\"productPrice\":(\d+\.?\d+)', float),
@@ -172,4 +173,4 @@ PRODUCT_ATTRS = (
         # is tax payable? redundant courtesy of currentTax
         # ('includeTax', r'\"includeTax\":\"(\w+)\",', bool),
     )
-)
+]
