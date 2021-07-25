@@ -1,14 +1,36 @@
 import logging
 import re
+import ssl
 from urllib.parse import urljoin, urlparse
 from typing import Optional, Callable, Sequence
 from dataclasses import dataclass
 
 import requests
+from requests import adapters
+from urllib3 import poolmanager
 from bs4 import BeautifulSoup
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+class TLSAdapter(adapters.HTTPAdapter):
+    """
+    Suma uses an out-dated set of ciphers for agreeing a connection. Downgrade
+    the security level to permit usage of older, less secure ciphers when using
+    this adapter.
+    """
+
+    def init_poolmanager(self, connections, maxsize, block=False):
+        """Create and initialize the urllib3 PoolManager."""
+        ctx = ssl.create_default_context()
+        ctx.set_ciphers('DEFAULT@SECLEVEL=1')
+        self.poolmanager = poolmanager.PoolManager(
+                num_pools=connections,
+                maxsize=maxsize,
+                block=block,
+                ssl_version=ssl.PROTOCOL_TLS,
+                ssl_context=ctx)
 
 
 @dataclass
@@ -29,6 +51,7 @@ class Suma:
         # use TLS, otherwise redirected to home
         self.base_url = "https://www.sumawholesale.com/"
         self.session = requests.Session()
+        self.session.mount(self.base_url, TLSAdapter())
 
     def get_product(self, code: str):
         """Externally facing method for getting product data."""
@@ -54,6 +77,13 @@ class Suma:
         # complete URL
         url = urljoin(self.base_url, path)
 
+        # was running into problems with a lack of root certificates
+        # N.B. certificates are a chain of trust, at the base are parent certs
+        # these typically come from a trusted authority like DigiCert
+        # OS may be missing these certs, can install some with certifi
+        # and then point requests/urllib to them if need be
+        # import certifi
+        # session.request(..., verify=certifi.where())
         response = self.session.request(method, url, data=data)
 
         # raise exception if request unsuccessful
