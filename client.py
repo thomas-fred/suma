@@ -53,7 +53,7 @@ class Suma:
         self.session = requests.Session()
         self.session.mount(self.base_url, TLSAdapter())
 
-    def get_product(self, code: str):
+    def get_product(self, code: str) -> dict:
         """Externally facing method for getting product data."""
 
         path, name = self._get_product_path_and_name(code)
@@ -119,10 +119,11 @@ class Suma:
 
             except AttributeError:
                 LOGGER.warning(
-                    f"failed to find attr {attr.name} on page {path}"
+                    "failed to find attr {} w/ {} on page {}".format(
+                        attr.name, attr.pattern, path
+                    )
                 )
                 raise  # die
-
 
         return data
 
@@ -178,16 +179,15 @@ class Suma:
             # get the product from the listings list (li)
             product = listings.find('li', attrs={'class': 'item'})
 
-            # extract the link from the product item, or none if not available
-            url = product.find('a').get('href')
-
-            # get name of product too, cutting leading and trailing whitespace
-            name = product.find('a').get('title').strip()
-
         except AttributeError:
             # maybe tried to run find on None type returned by previous .find
-            LOGGER.warning(f"failed to get path for {code}")
-            raise  # die
+            raise ValueError(f"failed to get data for {code} -- is it valid?")
+
+        # extract the link from the product item, or none if not available
+        url = product.find('a').get('href')
+
+        # get name of product too, cutting leading and trailing whitespace
+        name = product.find('a').get('title').strip()
 
         # return relative path
         return urlparse(url).path, name
