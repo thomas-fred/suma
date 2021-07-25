@@ -197,9 +197,10 @@ class Suma:
 PRODUCT_ATTRS = [
     ProductAttribute(*data) for data in (
         # ex vat price
-        ('price', r'\"productPrice\":(\d+\.?\d+)', float),
-        # tax rate as a percentage
-        ('currentTax', r'\"currentTax\":(\d+\.?\d*)', float),
+        # decimal optional in regex, some prices are ints
+        ('price', r'\"productPrice\":(\d+\.?\d{0,2})', float),
+        # tax rate as a percentage, take max 2 d.p.
+        ('currentTax', r'\"currentTax\":(\d+\.?\d{0,2})', float),
         # is tax payable? redundant courtesy of currentTax
         # ('includeTax', r'\"includeTax\":\"(\w+)\",', bool),
     )
