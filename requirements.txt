@@ -1,8 +1,13 @@
+# for the web app
+flask~=2.0.1
+flask-table~=0.5.0
+
 # reading/writing csv files
-pandas==0.25.3
+# had some difficulties compiling, so may want --prefer-binary on install
+pandas~=1.3.1
 
 # html parser
-beautifulsoup4==4.9.3
+beautifulsoup4~=4.9.3
 
 # http requests
-requests==2.5.1
+requests~=2.26.0
